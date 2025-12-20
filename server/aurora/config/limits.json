@@ -1,0 +1,4 @@
+{
+  "rateLimitBackoffBaseMs": 1000,
+  "maxRetries": 3
+}

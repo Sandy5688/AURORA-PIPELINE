@@ -1,0 +1,8 @@
+{
+  "topic": {
+    "external": "https://example.com/topics"
+  },
+  "text": "https://text.api/generate",
+  "voice": "https://voice.api/generate",
+  "video": "https://video.api/generate"
+}

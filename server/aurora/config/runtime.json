@@ -1,0 +1,6 @@
+{
+  "topicSource": "internal",
+  "distribution": {
+    "async": true
+  }
+}

@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Aurora Cyberpunk Palette */
+  --background: 222 47% 6%;    /* Deep Space Black */
+  --foreground: 210 40% 98%;   /* Starlight White */
+  
+  --primary: 180 100% 50%;     /* Cyan Neon */
+  --primary-foreground: 222 47% 6%;
+  
+  --secondary: 280 100% 60%;   /* Electric Purple */
+  --secondary-foreground: 210 40% 98%;
+  
+  --muted: 217 33% 17%;        /* Dark Gray/Blue */
+  --muted-foreground: 215 20% 65%;
+  
+  --accent: 150 100% 50%;      /* Matrix Green */
+  --accent-foreground: 222 47% 6%;
+  
+  --destructive: 0 100% 60%;   /* Alert Red */
+  --destructive-foreground: 210 40% 98%;
+  
+  --border: 217 33% 20%;
+  --input: 217 33% 17%;
+  --ring: 180 100% 50%;
+  
+  --radius: 0.5rem;
+  
+  --font-display: 'Oxanium', cursive;
+  --font-body: 'Space Grotesk', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
+    font-family: var(--font-body);
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(6, 182, 212, 0.15), transparent 25%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-background/60 backdrop-blur-md border border-white/10 shadow-xl;
+  }
+  
+  .neon-border {
+    @apply border border-primary/50 shadow-[0_0_10px_rgba(6,182,212,0.3)];
+  }
+  
+  .text-glow {
+    text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+  }
+}
+
+/* Custom Scrollbar for Logs */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted/30;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded hover:bg-muted-foreground/50 transition-colors;
+}
