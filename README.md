@@ -808,28 +808,6 @@ docker stats
    - Implement parallel execution where possible
    - Monitor and optimize individual engines
 
-## Contributing
-
-### Development Workflow
-
-1. Create feature branch
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-
-2. Make changes and test
-   ```bash
-   npm run check
-   npm run dev
-   ```
-
-3. Build and verify
-   ```bash
-   npm run build
-   npm start
-   ```
-
-4. Submit pull request
 
 ### Code Standards
 
@@ -839,9 +817,7 @@ docker stats
 - Database transactions
 - Unit tests (recommended)
 
-## License
 
-MIT License - See LICENSE file for details
 
 ---
 
@@ -855,14 +831,7 @@ MIT License - See LICENSE file for details
 - [Vite Documentation](https://vitejs.dev/)
 - [Node-cron Documentation](https://github.com/kelektiv/node-cron)
 
-### Support
-
-For issues and feature requests, please open an issue on the repository.
-
-For production support and SLA agreements, contact: [support@example.com]
-
 ---
 
-**Last Updated**: December 2024
+**Last Updated**: December 2025
 **Version**: 1.0.0
-**Maintainer**: Aurora Pipeline Team
