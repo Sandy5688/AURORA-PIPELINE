@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: aurora-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aurora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aurora_password}
+      POSTGRES_DB: ${POSTGRES_DB:-aurora_pipeline}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/migrations
+    networks:
+      - aurora-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aurora}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Aurora Pipeline Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aurora-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aurora}:${POSTGRES_PASSWORD:-aurora_password}@postgres:5432/${POSTGRES_DB:-aurora_pipeline}
+      PIPELINE_ENABLED: ${PIPELINE_ENABLED:-true}
+      RUN_FREQUENCY: ${RUN_FREQUENCY:-"0 */12 * * *"}
+      PORT: 3000
+      # Add your API keys and endpoints here
+      # OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      # RUNWAYML_API_KEY: ${RUNWAYML_API_KEY}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./runs:/app/runs
+      - ./logs:/app/logs
+    networks:
+      - aurora-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  aurora-network:
+    driver: bridge
