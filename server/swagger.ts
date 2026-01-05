@@ -106,17 +106,6 @@ export function setupSwagger(app: Express) {
     '/api-docs',
     swaggerUi.serve,
     swaggerUi.setup(specs, {
-      swaggerOptions: {
-        persistAuthorization: true,
-        displayOperationId: true,
-        filter: true,
-        showRequestHeaders: true,
-        presets: [
-          swaggerUi.presets.apis,
-          swaggerUi.SwaggerUIBundle.presets.SwaggerUIStandalonePresets,
-        ],
-        layout: 'BaseLayout',
-      },
       customCss: '.swagger-ui .topbar { display: none }',
     }),
   );
