@@ -3,6 +3,10 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { logger, logInfo, logError } from "./logger";
+import { authenticateMiddleware, optionalAuthMiddleware } from "./auth";
+import { setupSwagger } from "./swagger";
+import { createRateLimiter, rateLimitPresets } from "./rate-limiter";
 
 const app = express();
 const httpServer = createServer(app);
@@ -34,6 +38,24 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+// Setup Swagger/OpenAPI documentation
+setupSwagger(app);
+
+// Rate limiters
+const apiLimiter = createRateLimiter('api');
+const authLimiter = createRateLimiter('auth');
+const pipelineLimiter = createRateLimiter('pipeline');
+
+// Apply rate limiting to API endpoints
+app.use('/api/', apiLimiter.middleware());
+app.use('/api/auth/login', authLimiter.middleware());
+app.use('/api/auth/register', authLimiter.middleware());
+app.use('/api/runs/trigger', pipelineLimiter.middleware());
+
+// Optional authentication for all API routes
+app.use('/api/', optionalAuthMiddleware);
+
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -54,6 +76,13 @@ app.use((req, res, next) => {
       }
 
       log(logLine);
+      logInfo(logLine, {
+        method: req.method,
+        path,
+        statusCode: res.statusCode,
+        duration,
+        ip: req.ip,
+      });
     }
   });
 
@@ -68,6 +97,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
+    logError("Request error", err, { message });
     throw err;
   });
 
@@ -94,6 +124,59 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      logInfo(`Aurora Pipeline server started on port ${port}`, {
+        env: process.env.NODE_ENV,
+        port,
+      });
     },
   );
+
+  // Graceful shutdown handlers (production readiness)
+  process.on('SIGTERM', async () => {
+    log('SIGTERM received, starting graceful shutdown...', 'shutdown');
+    logInfo('SIGTERM received - graceful shutdown initiated', { signal: 'SIGTERM' });
+    httpServer.close(async () => {
+      log('HTTP server closed', 'shutdown');
+      logInfo('HTTP server closed successfully', {});
+      process.exit(0);
+    });
+
+    // Force shutdown after 30 seconds
+    setTimeout(() => {
+      log('Force shutdown due to timeout', 'shutdown');
+      logError('Force shutdown due to timeout', new Error('Graceful shutdown timeout'));
+      process.exit(1);
+    }, 30000);
+  });
+
+  process.on('SIGINT', async () => {
+    log('SIGINT received, starting graceful shutdown...', 'shutdown');
+    logInfo('SIGINT received - graceful shutdown initiated', { signal: 'SIGINT' });
+    httpServer.close(async () => {
+      log('HTTP server closed', 'shutdown');
+      logInfo('HTTP server closed successfully', {});
+      process.exit(0);
+    });
+
+    // Force shutdown after 30 seconds
+    setTimeout(() => {
+      log('Force shutdown due to timeout', 'shutdown');
+      logError('Force shutdown due to timeout', new Error('Graceful shutdown timeout'));
+      process.exit(1);
+    }, 30000);
+  });
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (err) => {
+    log(`Uncaught Exception: ${err.message}`, 'error');
+    logError('Uncaught exception', err, { fatal: true });
+    console.error(err.stack);
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    log(`Unhandled Rejection at ${promise}: ${reason}`, 'error');
+    logError('Unhandled rejection', new Error(String(reason)), { promise: String(promise) });
+    process.exit(1);
+  });
 })();

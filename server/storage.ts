@@ -1,9 +1,10 @@
 import { db } from "./db";
 import {
-  runs, pipelineLogs, assets,
+  runs, pipelineLogs, assets, dlq,
   type Run, type InsertRun,
   type PipelineLog, type InsertLog,
-  type Asset, type InsertAsset
+  type Asset, type InsertAsset,
+  type DLQEntry, type InsertDLQEntry
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
@@ -22,6 +23,12 @@ export interface IStorage {
   createAsset(asset: InsertAsset): Promise<Asset>;
   updateAsset(id: number, updates: Partial<Asset>): Promise<Asset>;
   getAssets(runId: string): Promise<Asset[]>;
+
+  // DLQ (Dead Letter Queue)
+  createDLQEntry(entry: InsertDLQEntry): Promise<DLQEntry>;
+  getDLQEntries(runId?: string): Promise<DLQEntry[]>;
+  updateDLQEntry(id: number, updates: Partial<DLQEntry>): Promise<DLQEntry>;
+  deleteDLQEntry(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -76,6 +83,33 @@ export class DatabaseStorage implements IStorage {
 
   async getAssets(runId: string): Promise<Asset[]> {
     return await db.select().from(assets).where(eq(assets.runId, runId));
+  }
+
+  // DLQ Operations
+  async createDLQEntry(entry: InsertDLQEntry): Promise<DLQEntry> {
+    const [newEntry] = await db.insert(dlq).values(entry).returning();
+    return newEntry;
+  }
+
+  async getDLQEntries(runId?: string): Promise<DLQEntry[]> {
+    if (runId) {
+      return await db.select().from(dlq)
+        .where(eq(dlq.runId, runId))
+        .orderBy(desc(dlq.createdAt));
+    }
+    return await db.select().from(dlq).orderBy(desc(dlq.createdAt));
+  }
+
+  async updateDLQEntry(id: number, updates: Partial<DLQEntry>): Promise<DLQEntry> {
+    const [updated] = await db.update(dlq)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(dlq.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDLQEntry(id: number): Promise<void> {
+    await db.delete(dlq).where(eq(dlq.id, id));
   }
 }
 

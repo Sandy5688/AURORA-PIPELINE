@@ -15,14 +15,13 @@ export async function runPipeline() {
 
   // 1. Create Run Record
   const dbRun = await storage.createRun({
-    id: runId,
     status: "running",
   });
 
   const log = async (level: string, message: string, metadata?: any) => {
     console.log(`[${level.toUpperCase()}] ${message}`, metadata || '');
     await storage.createLog({
-      runId,
+      runId: dbRun.id,
       level,
       message,
       metadata
@@ -72,7 +71,7 @@ export async function runPipeline() {
     await log('info', 'Assets distributed', { receipts });
 
     // 7. Complete
-    await storage.updateRun(runId, {
+    await storage.updateRun(dbRun.id, {
       status: 'completed',
       completedAt: new Date()
     });
@@ -81,7 +80,7 @@ export async function runPipeline() {
   } catch (e: any) {
     console.error(e);
     await log('error', 'Pipeline failed', { error: e.message });
-    await storage.updateRun(runId, {
+    await storage.updateRun(dbRun.id, {
       status: 'failed',
       error: e.message,
       completedAt: new Date()
