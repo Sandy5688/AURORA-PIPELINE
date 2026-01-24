@@ -38,6 +38,7 @@ export const dlq = pgTable("dlq", {
   status: text("status").notNull().default("pending"), // pending, retrying, failed, resolved
   error: text("error").notNull(),
   payload: jsonb("payload"), // Original input that failed
+  payloadHash: text("payload_hash"), // For deduplication
   retryCount: serial("retry_count").default(0),
   maxRetries: serial("max_retries").default(3),
   lastRetryAt: timestamp("last_retry_at"),

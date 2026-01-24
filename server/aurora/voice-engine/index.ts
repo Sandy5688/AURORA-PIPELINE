@@ -55,5 +55,9 @@ export async function generateAudio(text: string, runId: string) {
       console.error('[ERROR] ElevenLabs API call failed:', error.message);
       throw error;
     }
+  }, undefined, {
+    runId,
+    operation: 'voice_generation',
+    payload: { text: text.substring(0, 100) } // Truncate for storage
   });
 }

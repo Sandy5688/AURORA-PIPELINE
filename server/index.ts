@@ -8,6 +8,49 @@ import { authenticateMiddleware, optionalAuthMiddleware } from "./auth";
 import { setupSwagger } from "./swagger";
 import { createRateLimiter, rateLimitPresets } from "./rate-limiter";
 
+// ===== STARTUP VALIDATION (ISSUE #02) =====
+function validateStartupConfig() {
+  const requiredEnvVars = [
+    'OPENAI_API_KEY',
+    'DATABASE_URL'
+  ];
+
+  const missing: string[] = [];
+  
+  for (const envVar of requiredEnvVars) {
+    const value = process.env[envVar];
+    if (!value || value.trim() === '') {
+      missing.push(envVar);
+    }
+  }
+
+  if (missing.length > 0) {
+    console.error('╔════════════════════════════════════════════════════════╗');
+    console.error('║  [FATAL] STARTUP CONFIG VALIDATION FAILED             ║');
+    console.error('╚════════════════════════════════════════════════════════╝');
+    console.error('');
+    console.error('Missing or empty required environment variables:');
+    missing.forEach(varName => {
+      console.error(`  ❌ ${varName}`);
+    });
+    console.error('');
+    console.error('Service cannot start without required configuration.');
+    console.error('Please set all required environment variables and try again.');
+    console.error('');
+    
+    logError('Startup validation failed - missing required env vars', new Error('Missing env vars'), { missing });
+    
+    process.exit(1);
+  }
+
+  console.log('✓ Startup config validation passed');
+  logInfo('Startup config validation passed', { validated: requiredEnvVars });
+}
+
+// Run validation before anything else
+validateStartupConfig();
+// ===== END STARTUP VALIDATION =====
+
 const app = express();
 const httpServer = createServer(app);
 

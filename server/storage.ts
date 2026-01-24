@@ -6,7 +6,7 @@ import {
   type Asset, type InsertAsset,
   type DLQEntry, type InsertDLQEntry
 } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Runs
@@ -29,6 +29,7 @@ export interface IStorage {
   getDLQEntries(runId?: string): Promise<DLQEntry[]>;
   updateDLQEntry(id: number, updates: Partial<DLQEntry>): Promise<DLQEntry>;
   deleteDLQEntry(id: number): Promise<void>;
+  checkDLQExists(runId: string, operation: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -110,6 +111,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDLQEntry(id: number): Promise<void> {
     await db.delete(dlq).where(eq(dlq.id, id));
+  }
+
+  async checkDLQExists(runId: string, operation: string): Promise<boolean> {
+    const entries = await db.select().from(dlq)
+      .where(and(
+        eq(dlq.runId, runId),
+        eq(dlq.operation, operation)
+      ));
+    return entries.length > 0;
   }
 }
 
