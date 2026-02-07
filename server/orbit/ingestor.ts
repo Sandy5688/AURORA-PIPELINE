@@ -10,18 +10,22 @@ import { TrendRadarItem, OrbitConfig, DEFAULT_ORBIT_CONFIG } from './types';
 
 /**
  * Get the most recent TrendRadar database file
+ * Supports both local development and Docker volume paths
  */
 function getLatestDbPath(config: OrbitConfig = DEFAULT_ORBIT_CONFIG): string | null {
-    const newsDir = path.resolve(__dirname, '..', '..', config.trendRadarPath);
+    // Docker volume path takes priority (set in docker-compose)
+    const baseDir = process.env.TRENDRADAR_OUTPUT_PATH
+        ? path.join(process.env.TRENDRADAR_OUTPUT_PATH, 'news')
+        : path.resolve(__dirname, '..', '..', config.trendRadarPath);
 
-    if (!fs.existsSync(newsDir)) {
-        console.error(`[Orbit/Ingestor] TrendRadar news directory not found: ${newsDir}`);
+    if (!fs.existsSync(baseDir)) {
+        console.error(`[Orbit/Ingestor] TrendRadar news directory not found: ${baseDir}`);
         return null;
     }
 
     // List all .db files and sort by date (filename format: YYYY-MM-DD.db)
-    const dbFiles = fs.readdirSync(newsDir)
-        .filter(f => f.endsWith('.db'))
+    const dbFiles = fs.readdirSync(baseDir)
+        .filter((f: string) => f.endsWith('.db'))
         .sort()
         .reverse();
 
@@ -30,7 +34,7 @@ function getLatestDbPath(config: OrbitConfig = DEFAULT_ORBIT_CONFIG): string | n
         return null;
     }
 
-    const latestDb = path.join(newsDir, dbFiles[0]);
+    const latestDb = path.join(baseDir, dbFiles[0]);
     console.log(`[Orbit/Ingestor] Using database: ${dbFiles[0]}`);
     return latestDb;
 }
