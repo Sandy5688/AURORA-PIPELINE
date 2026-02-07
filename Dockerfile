@@ -27,9 +27,6 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install runtime dependencies only
-RUN apk add --no-cache dumb-init
-
 # Copy package files
 COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
 
@@ -46,10 +43,7 @@ RUN mkdir -p /app/runs /app/logs
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["/sbin/dumb-init", "--"]
-
-# Start the application
+# Start the application directly
 CMD ["node", "dist/index.cjs"]
 
 # Expose port
