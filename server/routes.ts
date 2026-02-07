@@ -16,6 +16,7 @@ import {
   getUserById,
 } from "./auth";
 import { logInfo, logError } from "./logger";
+import { orbitRouter, checkOrbitHealth } from "./orbit";
 
 // Health check state
 let dbHealthy = false;
@@ -83,7 +84,7 @@ export async function registerRoutes(
   app.get('/ready', async (req, res) => {
     const dbReady = await checkDatabaseHealth();
     const schedulerReady = schedulerRunning;
-    
+
     if (dbReady && schedulerReady) {
       res.status(200).json({
         status: 'ready',
@@ -107,7 +108,7 @@ export async function registerRoutes(
     const completedRuns = runs.filter(r => r.status === 'completed').length;
     const failedRuns = runs.filter(r => r.status === 'failed').length;
     const runningRuns = runs.filter(r => r.status === 'running').length;
-    
+
     res.set('Content-Type', 'text/plain');
     res.send(`# Aurora Pipeline Metrics
 # HELP aurora_runs_total Total number of pipeline runs
@@ -130,6 +131,10 @@ aurora_nodejs_heap_total_bytes ${process.memoryUsage().heapTotal}
 
   // Start DLQ processor for failed job retries
   startDLQProcessor();
+
+  // Register Orbit layer routes for TrendRadar topic integration
+  app.use('/api/orbit', orbitRouter);
+  console.log('[Routes] Orbit layer registered at /api/orbit');
 
   app.get(api.runs.list.path, async (req, res) => {
     const runs = await storage.getRuns();

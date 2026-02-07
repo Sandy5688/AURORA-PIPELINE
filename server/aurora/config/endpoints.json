@@ -1,6 +1,6 @@
 {
   "topic": {
-    "external": "https://example.com/topics"
+    "external": "http://localhost:3000/api/orbit/topic"
   },
   "text": "https://text.api/generate",
   "voice": "https://voice.api/generate",
