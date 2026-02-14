@@ -17,6 +17,9 @@ import {
 } from "./auth";
 import { logInfo, logError } from "./logger";
 import { orbitRouter, checkOrbitHealth } from "./orbit";
+import { oauthRouter } from "./aurora/oauth";
+import fs from 'fs';
+import path from 'path';
 
 // Health check state
 let dbHealthy = false;
@@ -135,6 +138,32 @@ aurora_nodejs_heap_total_bytes ${process.memoryUsage().heapTotal}
   // Register Orbit layer routes for TrendRadar topic integration
   app.use('/api/orbit', orbitRouter);
   console.log('[Routes] Orbit layer registered at /api/orbit');
+
+  // Register OAuth routes for YouTube/LinkedIn token exchange
+  app.use('/api/oauth', oauthRouter);
+  console.log('[Routes] OAuth helper registered at /api/oauth');
+
+  // Load persisted OAuth tokens from file
+  try {
+    const tokenFile = path.join('/app', 'oauth-tokens.json');
+    if (fs.existsSync(tokenFile)) {
+      const tokens = JSON.parse(fs.readFileSync(tokenFile, 'utf-8'));
+      if (tokens.youtube?.refreshToken && !process.env.YOUTUBE_REFRESH_TOKEN) {
+        process.env.YOUTUBE_REFRESH_TOKEN = tokens.youtube.refreshToken;
+        console.log('[Routes] Loaded YouTube refresh token from file');
+      }
+      if (tokens.linkedin?.accessToken && !process.env.LINKEDIN_ACCESS_TOKEN) {
+        process.env.LINKEDIN_ACCESS_TOKEN = tokens.linkedin.accessToken;
+        console.log('[Routes] Loaded LinkedIn access token from file');
+      }
+      if (tokens.linkedin?.personId && !process.env.LINKEDIN_PERSON_ID) {
+        process.env.LINKEDIN_PERSON_ID = tokens.linkedin.personId;
+        console.log('[Routes] Loaded LinkedIn person ID from file');
+      }
+    }
+  } catch (e: any) {
+    console.warn('[Routes] Could not load OAuth tokens:', e.message);
+  }
 
   app.get(api.runs.list.path, async (req, res) => {
     const runs = await storage.getRuns();

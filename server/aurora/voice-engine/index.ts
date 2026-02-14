@@ -3,26 +3,24 @@ import path from 'path';
 import fs from 'fs';
 
 export async function generateAudio(text: string, runId: string) {
-  return withRetry(async () => {
-    const voiceApiKey = process.env.VOICE_API_KEY;
-    
-    if (!voiceApiKey) {
-      console.warn('[WARN] VOICE_API_KEY not set, using mock audio generation');
-      // Fallback to mock for demo
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const filePath = path.join(process.cwd(), 'runs', runId, 'audio', 'main.mp3');
-      fs.writeFileSync(filePath, "Mock Audio Content (ElevenLabs disabled)");
-      return filePath;
-    }
+  const voiceApiKey = process.env.VOICE_API_KEY;
 
-    // Real ElevenLabs API call
-    try {
+  if (!voiceApiKey) {
+    console.warn('[WARN] VOICE_API_KEY not set, using mock audio generation');
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const filePath = path.join(process.cwd(), 'runs', runId, 'audio', 'main.mp3');
+    fs.writeFileSync(filePath, "Mock Audio Content (ElevenLabs disabled)");
+    return filePath;
+  }
+
+  try {
+    return await withRetry(async () => {
       console.log(`[INFO] Calling ElevenLabs API for voice generation (${text.substring(0, 50)}...)`);
-      
-      // ElevenLabs API endpoint
-      const voiceId = 'pNInz6obpgDQGcFmaJqB'; // Default voice ID
+
+      // River voice - Relaxed, Neutral, Informative (good for news)
+      const voiceId = process.env.ELEVENLABS_VOICE_ID || 'SAz9YHcvj6GT2YYXdXww';
       const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
+        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
         {
           method: 'POST',
           headers: {
@@ -30,8 +28,8 @@ export async function generateAudio(text: string, runId: string) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            text: text,
-            model_id: 'eleven_monolingual_v1',
+            text: text.substring(0, 5000),
+            model_id: 'eleven_multilingual_v2',
             voice_settings: {
               stability: 0.5,
               similarity_boost: 0.75,
@@ -41,23 +39,28 @@ export async function generateAudio(text: string, runId: string) {
       );
 
       if (!response.ok) {
-        throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
+        const errBody = await response.text();
+        throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText} - ${errBody.substring(0, 200)}`);
       }
 
-      // Write audio stream to file
+      // Write audio to file
       const buffer = await response.arrayBuffer();
       const filePath = path.join(process.cwd(), 'runs', runId, 'audio', 'main.mp3');
       fs.writeFileSync(filePath, Buffer.from(buffer));
-      
-      console.log(`[OK] Audio generated successfully: ${filePath}`);
+
+      console.log(`[OK] Audio generated successfully: ${filePath} (${(buffer.byteLength / 1024).toFixed(1)}KB)`);
       return filePath;
-    } catch (error: any) {
-      console.error('[ERROR] ElevenLabs API call failed:', error.message);
-      throw error;
-    }
-  }, undefined, {
-    runId,
-    operation: 'voice_generation',
-    payload: { text: text.substring(0, 100) } // Truncate for storage
-  });
+    }, undefined, {
+      runId,
+      operation: 'voice_generation',
+      payload: { text: text.substring(0, 100) }
+    });
+  } catch (error: any) {
+    // Graceful fallback — don't crash the pipeline
+    console.warn(`[WARN] Voice generation failed after retries: ${error.message}`);
+    console.warn('[WARN] Falling back to mock audio — pipeline will continue');
+    const filePath = path.join(process.cwd(), 'runs', runId, 'audio', 'main.mp3');
+    fs.writeFileSync(filePath, "Mock Audio (ElevenLabs failed, pipeline continuing)");
+    return filePath;
+  }
 }
