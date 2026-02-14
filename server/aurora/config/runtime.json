@@ -1,5 +1,5 @@
 {
-  "topicSource": "internal",
+  "topicSource": "external",
   "distribution": {
     "async": true
   }
